@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Household Financial Health & Risk Analyzer</title>
+    <meta name="description"
+        content="Interactive Monte Carlo–based financial health analyzer — model income, debt, and savings scenarios with real statistical risk metrics." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="index.css" />
+</head>
+
+<body>
+
+    <!-- ═══ Header ═══════════════════════════════════════════════════════════════ -->
+    <header class="app-header">
+        <div class="header-inner">
+            <div class="brand">
+                <span class="brand-icon">◈</span>
+                <div>
+                    <h1 class="brand-name">FinSim</h1>
+                    <p class="brand-tagline">Household Financial Health &amp; Risk Analyzer</p>
+                </div>
+            </div>
+            <nav class="tab-nav">
+                <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+                <button class="tab-btn" data-tab="simulation">Simulation</button>
+                <button class="tab-btn" data-tab="scenarios">Scenarios</button>
+                <button class="tab-btn" data-tab="analytics">Analytics</button>
+                <button class="tab-btn" data-tab="methodology">Methodology</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ═══ Layout ════════════════════════════════════════════════════════════════ -->
+    <div class="app-layout">
+
+        <!-- ── Sidebar: Input Panel ──────────────────────────────────────────────── -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-title">Parameters</span>
+                <button class="btn-ghost" id="sampleBtn">Load Sample</button>
+            </div>
+
+            <div class="input-section">
+                <h3 class="section-label">Income</h3>
+                <div class="field">
+                    <label for="income">Monthly Income (after tax)</label>
+                    <div class="input-prefix"><span>$</span><input type="number" id="income" value="7500" min="0" />
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="incomeVolatility">Income Volatility <span id="volLabel">±8%</span></label>
+                    <input type="range" id="incomeVolatility" min="0" max="50" step="1" value="8" />
+                </div>
+            </div>
+
+            <div class="input-section">
+                <h3 class="section-label">Expenses</h3>
+                <div class="field">
+                    <label for="fixedExpenses">Fixed Monthly Expenses</label>
+                    <div class="input-prefix"><span>$</span><input type="number" id="fixedExpenses" value="2800"
+                            min="0" /></div>
+                </div>
+                <div class="field">
+                    <label for="varExpenses">Variable Monthly Expenses</label>
+                    <div class="input-prefix"><span>$</span><input type="number" id="varExpenses" value="1500"
+                            min="0" /></div>
+                </div>
+            </div>
+
+            <div class="input-section">
+                <h3 class="section-label">Assets &amp; Savings</h3>
+                <div class="field">
+                    <label for="initialSavings">Liquid Cash / Emergency Fund</label>
+                    <div class="input-prefix"><span>$</span><input type="number" id="initialSavings" value="12000"
+                            min="0" /></div>
+                </div>
+                <div class="field">
+                    <label for="initialInvestments">Existing Investments / Retirement</label>
+                    <div class="input-prefix"><span>$</span><input type="number" id="initialInvestments" value="25000"
+                            min="0" /></div>
+                </div>
+                <div class="field">
+                    <label for="savingsGoal">Net Worth Goal</label>
+                    <div class="input-prefix"><span>$</span><input type="number" id="savingsGoal" value="500000"
+                            min="0" /></div>
+                </div>
+            </div>
+
+            <div class="input-section">
+                <h3 class="section-label">Debt</h3>
+                <div class="field">
+                    <label for="totalDebt">Total Outstanding Debt</label>
+                    <div class="input-prefix"><span>$</span><input type="number" id="totalDebt" value="38000" min="0" />
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="debtAPR">Weighted Average APR (%)</label>
+                    <div class="input-prefix"><span>%</span><input type="number" id="debtAPR" value="6.5" min="0"
+                            max="40" step="0.1" /></div>
+                </div>
+                <div class="field">
+                    <label for="minDebtPayment">Minimum Monthly Payment</label>
+                    <div class="input-prefix"><span>$</span><input type="number" id="minDebtPayment" value="750"
+                            min="0" /></div>
+                </div>
+            </div>
+
+            <div class="input-section">
+                <h3 class="section-label">Market &amp; Horizon</h3>
+                <div class="field">
+                    <label for="returnRate">Annual Investment Return <span id="returnLabel">7%</span></label>
+                    <input type="range" id="returnRate" min="1" max="15" step="0.5" value="7" />
+                </div>
+                <div class="field">
+                    <label for="inflationRate">Annual Inflation <span id="inflationLabel">3%</span></label>
+                    <input type="range" id="inflationRate" min="0" max="10" step="0.25" value="3" />
+                </div>
+                <div class="field">
+                    <label for="horizonYears">Time Horizon <span id="horizonLabel">15 years</span></label>
+                    <input type="range" id="horizonYears" min="1" max="30" step="1" value="15" />
+                </div>
+            </div>
+
+            <div class="sidebar-actions">
+                <button class="btn-primary" id="runBtn">
+                    <span class="btn-icon">▶</span> Run Analysis
+                </button>
+            </div>
+        </aside>
+
+        <!-- ── Main Content ───────────────────────────────────────────────────────── -->
+        <main class="main-content">
+
+            <!-- Scenario Switcher (shown on most tabs) -->
+            <div class="scenario-strip" id="scenarioStrip">
+                <span class="scenario-label">Active Scenario:</span>
+                <button class="sc-btn active" data-scenario="minimum">Minimum Payment</button>
+                <button class="sc-btn" data-scenario="aggressive">Aggressive Payoff</button>
+                <button class="sc-btn" data-scenario="investing">Invest Surplus</button>
+            </div>
+
+            <!-- ══ DASHBOARD TAB ════════════════════════════════════════════════════ -->
+            <div class="tab-panel active" data-panel="dashboard">
+                <div class="panel-header">
+                    <h2 class="panel-title">Dashboard <span class="panel-sub" id="dash-scenario-label"></span></h2>
+                    <p class="panel-desc">Key metrics for the selected scenario based on 5,000 Monte Carlo runs.</p>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="kpi-grid">
+                    <div class="kpi-card accent-violet">
+                        <div class="kpi-label">Median Net Worth</div>
+                        <div class="kpi-value" id="dash-median-nw">—</div>
+                        <div class="kpi-sub">at end of horizon</div>
+                    </div>
+                    <div class="kpi-card accent-cyan">
+                        <div class="kpi-label">95th Percentile</div>
+                        <div class="kpi-value" id="dash-p95-nw">—</div>
+                        <div class="kpi-sub">optimistic outcome</div>
+                    </div>
+                    <div class="kpi-card accent-rose">
+                        <div class="kpi-label">5th Percentile</div>
+                        <div class="kpi-value" id="dash-p5-nw">—</div>
+                        <div class="kpi-sub">downside outcome</div>
+                    </div>
+                    <div class="kpi-card accent-amber">
+                        <div class="kpi-label">Monthly Surplus</div>
+                        <div class="kpi-value" id="dash-surplus">—</div>
+                        <div class="kpi-sub">income − all costs</div>
+                    </div>
+                </div>
+
+                <!-- Probability Meters -->
+                <div class="glass-card">
+                    <h3 class="card-title">Probability Outcomes</h3>
+                    <div class="prob-meters">
+                        <div class="meter-row">
+                            <span class="meter-label">Cash Ruin Risk</span>
+                            <div class="meter-track negative-track">
+                                <div class="meter-fill" id="ruin-bar"></div>
+                            </div>
+                            <span class="meter-value" id="dash-ruin">—</span>
+                        </div>
+                        <div class="meter-row">
+                            <span class="meter-label">Goal Achievement</span>
+                            <div class="meter-track positive-track">
+                                <div class="meter-fill" id="goal-bar"></div>
+                            </div>
+                            <span class="meter-value" id="dash-goal">—</span>
+                        </div>
+                        <div class="meter-row">
+                            <span class="meter-label">Debt-Free Rate</span>
+                            <div class="meter-track positive-track">
+                                <div class="meter-fill" id="debt-bar"></div>
+                            </div>
+                            <span class="meter-value" id="dash-debtfree">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Two column: histogram + quick stats -->
+                <div class="two-col">
+                    <div class="glass-card chart-card">
+                        <h3 class="card-title">Ending Balance Distribution</h3>
+                        <div class="chart-wrap"><canvas id="dashHistogram"></canvas></div>
+                    </div>
+                    <div class="glass-card">
+                        <h3 class="card-title">Quick Stats</h3>
+                        <div class="stat-list">
+                            <div class="stat-row"><span>Debt-to-Income</span><span id="dash-dti">—</span></div>
+                            <div class="stat-row"><span>Median Debt-Free In</span><span id="qs-debtfree">—</span></div>
+                            <div class="stat-row"><span>95% VaR (Loss)</span><span id="qs-var95">—</span></div>
+                            <div class="stat-row"><span>Monthly Surplus</span><span class="stat-value"
+                                    id="qs-surplus">—</span></div>
+                            <div class="stat-row"><span>Scenario</span><span id="qs-scenario">—</span></div>
+                        </div>
+                        <div class="info-box">
+                            <strong>VaR Interpretation:</strong> At 95% confidence, your worst-case ending net worth
+                            does not fall below the VaR figure in 95% of simulations.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ SIMULATION TAB ══════════════════════════════════════════════════ -->
+            <div class="tab-panel" data-panel="simulation">
+                <div class="panel-header">
+                    <h2 class="panel-title">Simulation Results</h2>
+                    <p class="panel-desc">Net worth confidence intervals across all Monte Carlo runs (5th / 50th / 95th
+                        percentile).</p>
+                </div>
+
+                <div class="glass-card chart-card--tall">
+                    <div class="chart-wrap"><canvas id="confBandChart"></canvas></div>
+                </div>
+
+                <div class="glass-card">
+                    <h3 class="card-title">Descriptive Statistics — Ending Net Worth Distribution</h3>
+                    <div class="stats-grid">
+                        <div class="stat-cell">
+                            <div class="stat-cell-label">Runs (N)</div>
+                            <div class="stat-cell-val" id="sim-runs">—</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="stat-cell-label">Mean</div>
+                            <div class="stat-cell-val" id="sim-mean">—</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="stat-cell-label">Median (P50)</div>
+                            <div class="stat-cell-val" id="sim-median">—</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="stat-cell-label">Std Deviation</div>
+                            <div class="stat-cell-val" id="sim-std">—</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="stat-cell-label">Skewness</div>
+                            <div class="stat-cell-val" id="sim-skew">—</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="stat-cell-label">Excess Kurtosis</div>
+                            <div class="stat-cell-val" id="sim-kurt">—</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="stat-cell-label">5th Percentile</div>
+                            <div class="stat-cell-val" id="sim-p5">—</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="stat-cell-label">95th Percentile</div>
+                            <div class="stat-cell-val" id="sim-p95">—</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="stat-cell-label">Minimum</div>
+                            <div class="stat-cell-val" id="sim-min">—</div>
+                        </div>
+                        <div class="stat-cell">
+                            <div class="stat-cell-label">Maximum</div>
+                            <div class="stat-cell-val" id="sim-max">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ SCENARIOS TAB ═══════════════════════════════════════════════════ -->
+            <div class="tab-panel" data-panel="scenarios">
+                <div class="panel-header">
+                    <h2 class="panel-title">Scenario Comparison</h2>
+                    <p class="panel-desc">Three debt-management strategies compared side-by-side across all key metrics.
+                    </p>
+                </div>
+
+                <div class="glass-card chart-card">
+                    <div class="chart-wrap"><canvas id="scenarioBarChart"></canvas></div>
+                </div>
+
+                <div class="scenario-cards">
+                    <div class="sc-card sc-card--rose">
+                        <div class="sc-card-header">Minimum Payment</div>
+                        <div class="sc-stat"><label>Median Net Worth</label><span id="sc-minimum-median">—</span></div>
+                        <div class="sc-stat"><label>Ruin Risk</label><span id="sc-minimum-ruin">—</span></div>
+                        <div class="sc-stat"><label>Goal Probability</label><span id="sc-minimum-goal">—</span></div>
+                        <div class="sc-stat"><label>Median Debt-Free</label><span id="sc-minimum-debt">—</span></div>
+                        <p class="sc-desc">Pay only the minimum required on debt each month. Extra cash stays liquid but
+                            earns minimal return.</p>
+                    </div>
+                    <div class="sc-card sc-card--emerald">
+                        <div class="sc-card-header">Aggressive Payoff</div>
+                        <div class="sc-stat"><label>Median Net Worth</label><span id="sc-aggressive-median">—</span>
+                        </div>
+                        <div class="sc-stat"><label>Ruin Risk</label><span id="sc-aggressive-ruin">—</span></div>
+                        <div class="sc-stat"><label>Goal Probability</label><span id="sc-aggressive-goal">—</span></div>
+                        <div class="sc-stat"><label>Median Debt-Free</label><span id="sc-aggressive-debt">—</span></div>
+                        <p class="sc-desc">Pay 2.5× minimum on debt. Trades short-term cash flow for faster interest
+                            savings and debt elimination.</p>
+                    </div>
+                    <div class="sc-card sc-card--violet">
+                        <div class="sc-card-header">Invest Surplus</div>
+                        <div class="sc-stat"><label>Median Net Worth</label><span id="sc-investing-median">—</span>
+                        </div>
+                        <div class="sc-stat"><label>Ruin Risk</label><span id="sc-investing-ruin">—</span></div>
+                        <div class="sc-stat"><label>Goal Probability</label><span id="sc-investing-goal">—</span></div>
+                        <div class="sc-stat"><label>Median Debt-Free</label><span id="sc-investing-debt">—</span></div>
+                        <p class="sc-desc">Minimum debt payments; once debt is cleared, redirect 10% of income to
+                            investments each month.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ ANALYTICS TAB ═══════════════════════════════════════════════════ -->
+            <div class="tab-panel" data-panel="analytics">
+                <div class="panel-header">
+                    <h2 class="panel-title">Analytics &amp; Risk Metrics</h2>
+                    <p class="panel-desc">Value-at-Risk, correlation analysis, and OLS regression on the simulated data.
+                    </p>
+                </div>
+
+                <!-- VaR Card -->
+                <div class="two-col">
+                    <div class="glass-card">
+                        <h3 class="card-title">Value-at-Risk (Historical Simulation)</h3>
+                        <div class="var-metrics">
+                            <div class="var-row">
+                                <div>
+                                    <div class="var-label">95% VaR</div>
+                                    <div class="var-subtext">Loss not exceeded in 95% of runs</div>
+                                </div>
+                                <div class="var-value rose" id="analytics-var95">—</div>
+                            </div>
+                            <div class="var-row">
+                                <div>
+                                    <div class="var-label">99% VaR</div>
+                                    <div class="var-subtext">Loss not exceeded in 99% of runs</div>
+                                </div>
+                                <div class="var-value deep-rose" id="analytics-var99">—</div>
+                            </div>
+                            <div class="var-row">
+                                <div>
+                                    <div class="var-label">CVaR / Expected Shortfall (95%)</div>
+                                    <div class="var-subtext">Mean loss in the worst 5% of outcomes</div>
+                                </div>
+                                <div class="var-value amber" id="analytics-cvar95">—</div>
+                            </div>
+                        </div>
+                        <div class="info-box" style="margin-top:1rem">
+                            <strong>Methodology:</strong> Non-parametric (historical simulation) VaR computed from the
+                            empirical distribution of 5,000 ending balances. No distributional assumptions made.
+                        </div>
+                    </div>
+                    <div class="glass-card">
+                        <h3 class="card-title">OLS Regression — Net Worth vs. Time</h3>
+                        <div class="stat-list">
+                            <div class="stat-row"><span>Monthly Growth Rate (slope)</span><span id="reg-slope">—</span>
+                            </div>
+                            <div class="stat-row"><span>Intercept (Initial NW)</span><span id="reg-intercept">—</span>
+                            </div>
+                            <div class="stat-row"><span>R² (goodness of fit)</span><span id="reg-r2">—</span></div>
+                        </div>
+                        <div class="info-box" style="margin-top:1rem">
+                            The OLS line is fitted to the <em>median</em> net worth trajectory, expressing the linear
+                            growth trend of the central outcome. High R² indicates a strong linear trend; lower R²
+                            reflects compounding curvature.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VaR chart -->
+                <div class="glass-card chart-card">
+                    <h3 class="card-title">Balance Distribution with VaR Cutoffs</h3>
+                    <p class="chart-subtext">
+                        <span class="legend-dot" style="background:hsl(350,90%,40%)"></span> CVaR tail &nbsp;
+                        <span class="legend-dot" style="background:hsl(350,80%,60%)"></span> VaR 99 zone &nbsp;
+                        <span class="legend-dot" style="background:hsl(38,90%,58%)"></span> Negative range &nbsp;
+                        <span class="legend-dot" style="background:hsl(185,85%,55%)"></span> Positive range
+                    </p>
+                    <div class="chart-wrap"><canvas id="varChart"></canvas></div>
+                </div>
+
+                <!-- Correlation heatmap -->
+                <div class="glass-card">
+                    <h3 class="card-title">Pearson Correlation Heatmap — End-of-Horizon Values</h3>
+                    <p class="chart-subtext">Computed across sampled simulation trajectories. Violet = positive
+                        correlation, rose = negative.</p>
+                    <div class="heatmap-wrap"><canvas id="correlationHeatmap"></canvas></div>
+                </div>
+            </div>
+
+            <!-- ══ METHODOLOGY TAB ════════════════════════════════════════════════ -->
+            <div class="tab-panel" data-panel="methodology">
+                <div class="panel-header">
+                    <h2 class="panel-title">Methodology &amp; Documentation</h2>
+                    <p class="panel-desc">Full technical description, assumptions, and limitations for portfolio and
+                        academic use.</p>
+                </div>
+
+                <div class="glass-card methodology">
+                    <h2>Overview</h2>
+                    <p>This application models household financial dynamics using <strong>Monte Carlo
+                            simulation</strong> — a statistical technique that estimates the probability distribution of
+                        outcomes by running thousands of randomized scenarios. Rather than projecting a single
+                        "expected" future, we generate an entire distribution of possible futures and summarize it with
+                        percentiles, risk metrics, and descriptive statistics.</p>
+
+                    <h2>Simulation Engine</h2>
+                    <h3>Monthly Cash-Flow Model</h3>
+                    <p>Each month in each simulation run, the following cash-flow identity is applied:</p>
+                    <pre><code>Net Flow = Income − Fixed Expenses − Variable Expenses − Debt Payment − Extra Investment</code></pre>
+                    <p>The cash balance at the end of the month is:</p>
+                    <pre><code>Cash[t] = Cash[t-1] + Net Flow[t]</code></pre>
+                    <p>If <code>Cash[t] &lt; 0</code>, the shortfall is drawn from the investment/savings pool before
+                        declaring "ruin."</p>
+
+                    <h3>Income Shock Model</h3>
+                    <p>Monthly income is drawn from a normal distribution:</p>
+                    <pre><code>Income[t] ~ N(μ_income, σ_income)</code></pre>
+                    <p>where <code>σ_income = μ_income × (volatility% / 100)</code>. The Box-Muller transform is used to
+                        generate Gaussian samples from uniform random numbers. Income is floored at $0 to prevent
+                        negative income.</p>
+
+                    <h3>Variable Expense Model</h3>
+                    <p>Variable expenses are drawn from <code>N(μ_var, 0.25 × μ_var)</code> with a floor at 20% of the
+                        mean, representing irreducible minimum spending.</p>
+
+                    <h3>Inflation</h3>
+                    <p>Fixed and variable expenses are scaled monthly by <code>(1 + r_inflation)^t / 12</code> to
+                        reflect real purchasing-power erosion over time.</p>
+
+                    <h3>Debt Dynamics</h3>
+                    <p>Outstanding debt accrues interest monthly at <code>APR / 12</code>. Three payment strategies
+                        define the three scenarios:</p>
+                    <ul>
+                        <li><strong>Minimum Payment:</strong> Pay exactly the minimum required each month.</li>
+                        <li><strong>Aggressive Payoff:</strong> Pay 2.5× minimum toward debt each month, accelerating
+                            principal reduction and interest savings.</li>
+                        <li><strong>Invest Surplus:</strong> Minimum payments only; once debt reaches $0, redirect 10%
+                            of monthly income to investments.</li>
+                    </ul>
+
+                    <h3>Investment Growth</h3>
+                    <p>The investment/savings pool grows monthly at a rate drawn from
+                        <code>N(r_annual/12, |r_annual/12| × 0.4 + 0.005)</code>. The small additive noise term (0.005)
+                        prevents degenerate zero-variance when the return rate is near 0.
+                    </p>
+
+                    <h2>Statistical Methods</h2>
+                    <h3>Descriptive Statistics</h3>
+                    <ul>
+                        <li><strong>Mean, Median, Standard Deviation:</strong> Standard moment-based estimators using
+                            <em>N−1</em> (Bessel-corrected) variance.
+                        </li>
+                        <li><strong>Skewness:</strong> Fisher-Pearson standardized third moment — positive values
+                            indicate a right-heavy tail (more upside extreme outcomes).</li>
+                        <li><strong>Excess Kurtosis:</strong> Standardized fourth moment minus 3 (so the normal
+                            distribution scores 0). Positive values indicate heavier-than-normal tails ("fat tails").
+                        </li>
+                        <li><strong>Percentiles:</strong> Linear interpolation between adjacent order statistics.</li>
+                    </ul>
+
+                    <h3>Value-at-Risk (VaR)</h3>
+                    <p>We use the <strong>historical simulation</strong> (non-parametric) approach: sort the 5,000
+                        ending net-worth values and take the appropriate quantile as the VaR threshold. VaR at 95%
+                        answers: "In 95% of scenarios, your ending net worth is no worse than X." Expected Shortfall
+                        (CVaR) is the mean of outcomes in the worst 5%.</p>
+
+                    <h3>Correlation Analysis</h3>
+                    <p>Pearson correlation coefficients are computed between the end-of-horizon values (net worth, cash,
+                        savings, debt) across sampled trajectories. This reveals structural relationships in the
+                        simulation output — for example, high ending debt is typically strongly negatively correlated
+                        with ending net worth.</p>
+
+                    <h3>OLS Regression</h3>
+                    <p>A simple ordinary least squares (OLS) regression is fitted to the <em>median</em> net worth time
+                        series. The slope β gives the average monthly net-worth growth in the central scenario; R²
+                        measures how well a linear trend explains the path (compounding nonlinearity reduces R²).</p>
+
+                    <h2>Assumptions &amp; Limitations</h2>
+                    <h3>Key Assumptions</h3>
+                    <ul>
+                        <li>All inputs are <strong>after-tax</strong>; the model does not simulate tax brackets or
+                            capital gains taxes.</li>
+                        <li>Income shocks are <strong>i.i.d.</strong> (independently and identically distributed) — no
+                            autocorrelation. Real income often shows serial correlation (raises, layoffs).</li>
+                        <li>Market returns are drawn from a <strong>stationary normal distribution</strong>. Real
+                            markets exhibit fat tails, skewness, and regime changes (e.g., 2008 financial crisis).</li>
+                        <li>Expense growth follows <strong>deterministic inflation</strong> compounding — no modeling of
+                            lifestyle changes, emergencies, or health costs beyond the variable-expense distribution.
+                        </li>
+                        <li>Debt is a single pooled instrument with a weighted average APR — individual loan tranches
+                            are not modeled separately.</li>
+                    </ul>
+                    <h3>Limitations</h3>
+                    <ul>
+                        <li>This is a <strong>simplified educational model</strong>, not a certified financial planning
+                            tool.</li>
+                        <li>The model does not account for Social Security, pensions, inheritance, large one-time
+                            expenditures, or home equity.</li>
+                        <li>Survivorship bias: "ruin" simulations are terminated at first cash default but the run still
+                            contributes to the ending distribution as if recovery were instant.</li>
+                        <li>With 5,000 runs and a 30-year horizon (~360 months), computational limitations reduce
+                            trajectory storage to a random sample of 200 runs for the confidence-band visualization.
+                        </li>
+                    </ul>
+
+                    <h2>Portfolio Note</h2>
+                    <p>This project was independently designed and built as a self-directed research + engineering
+                        exercise in applied statistics and personal finance. It demonstrates Monte Carlo methods,
+                        descriptive statistics, regression analysis, and non-parametric risk measurement in a real-world
+                        context suitable for a statistics or quantitative finance portfolio.</p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="src/simulation.js"></script>
+    <script src="src/statistics.js"></script>
+    <script src="src/charts.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
